@@ -1,0 +1,159 @@
+﻿@using prn211.Models;
+@model prn211.Models.Course
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@{
+    ViewData["Title"] = ViewData["Coursename"];
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Các khai báo meta, link, và script khác ở đây -->
+    <style>
+        .section {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    @* <h1>Edit Course: @ViewData["Coursename"]</h1> *@
+
+
+    <form id="sectionForm">
+        <div class="section">
+            <h2>Add Section</h2>
+            <label for="sectionName" class="form-label">Section Name:</label>
+            <input type="text" id="sectionName" name="sectionName">
+            <label for="startTime" class="form-label">Start Time:</label>
+            <input type="datetime-local" id="startTime" name="startTime">
+            <label for="endTime" class="form-label">End Time:</label>
+            <input type="datetime-local" id="endTime" name="endTime">
+            <button type="button" id="addSectionButton">Add Section</button>
+        </div>
+    </form>
+
+    @foreach (var item in ViewData["CourseSections"] as List<CourseSection>)
+    {
+        <div id="sectionsContainer">
+            <div class="section">
+                <h2>Section @item.Sectionorder: @item.Sectiontitle (Start Time: @item.Sectiondob, End Time: @item.Sectiondob)</h2>
+                <input type="file" multiple>
+                <button type="button">Upload</button>
+            </div>
+        </div>
+    }
+
+
+    <div id="sectionsContainer"></div>
+
+    <script>
+        var sectionCount = 0;
+        var sectionsContainer = document.getElementById("sectionsContainer");
+
+        document.getElementById("addSectionButton").addEventListener("click", function () {
+            sectionCount++;
+
+            var sectionForm = document.getElementById("sectionForm");
+            var sectionName = sectionForm.elements["sectionName"].value;
+            var startTime = sectionForm.elements["startTime"].value;
+            var endTime = sectionForm.elements["endTime"].value;
+
+            if (sectionName && startTime && endTime) {
+                var uploadSection = document.createElement("div");
+                uploadSection.classList.add("section");
+
+                var sectionTitle = document.createElement("h2");
+                sectionTitle.textContent = "Section " + sectionCount + ": " + sectionName +
+                    " (Start Time: " + startTime + ", End Time: " + endTime + ")";
+
+                var fileInput = document.createElement("input");
+                fileInput.type = "file";
+                fileInput.multiple = true;
+
+                var uploadButton = document.createElement("button");
+                uploadButton.textContent = "Upload";
+                uploadButton.addEventListener("click", function () {
+                    // Thực hiện tải tệp lên cho section thời gian này
+                    var uploadedFiles = fileInput.files;
+                    if (uploadedFiles.length > 0) {
+                        for (var i = 0; i < uploadedFiles.length; i++) {
+                            var file = uploadedFiles[i];
+                            // Thêm mã xử lý tải lên ở đây
+                            var downloadButton = document.createElement("a");
+                            downloadButton.textContent = "Download";
+                            downloadButton.href = "#";
+                            downloadButton.download = file.name;
+
+                            var deleteButton = document.createElement("button");
+                            deleteButton.textContent = "Delete";
+                            deleteButton.addEventListener("click", function () {
+                                downloadButton.remove();
+                                deleteButton.remove();
+                            });
+
+                            var fileContainer = document.createElement("div");
+                            fileContainer.appendChild(downloadButton);
+                            fileContainer.appendChild(deleteButton);
+                            uploadSection.appendChild(fileContainer);
+                        }
+                        uploadFileToServerAndDatabase(file, sectionCount);
+                    }
+                });
+                function uploadFileToServerAndDatabase(file, sectionNumber) {
+
+                    var formData = new FormData();
+                    formData.append("file", file);
+
+
+                    fetch("/api/upload", {
+                        method: "POST",
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+
+                            saveFileToDatabase(data, sectionNumber);
+                        })
+                        .catch(error => {
+                            console.error("Error uploading file:", error);
+                        });
+                }
+
+                function saveFileToDatabase(fileData, sectionNumber) {
+
+                    fetch("/api/save-file", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ fileData, sectionNumber })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                        })
+                        .catch(error => {
+                            console.error("Error saving file to database:", error);
+                        });
+                }
+                uploadSection.appendChild(sectionTitle);
+                uploadSection.appendChild(fileInput);
+                uploadSection.appendChild(uploadButton);
+                sectionsContainer.appendChild(uploadSection);
+            }
+        });
+    </script>
+
+
+
+</body>
+</html>
